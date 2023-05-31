@@ -1,84 +1,114 @@
-// MODULES //
-// const { sayHello } = require('./helpers/sayHello.helper');
-// sayHello();
+const fs = require('fs');
+const express = require('express');
 
-// GLOBAL VARIABLES //
-//__dirname, __filename, process.cwd();
-// console.log('from app.js');
-//
-// console.log(__dirname);
-// console.log(__filename);
-// console.log(process.cwd());
-// CWD - current working directory
+const app = express();
+app.use(express.json());
 
-// PATH
-// const path = require('path');
-// C:\Users\l4pukhh\WebstormProjects\dec-2022
-// Users/l4pukhh/WebstormProjects/dec-2022/helpers
-// const joinedPath = path.join(__dirname, 'folder', 'folder2', 'text.txt');
-// const normalizedPath = path.normalize('////test////test2////////test3///test4');
-// const resolvedPath = path.resolve('folder', 'folder2', 'text.txt');
-//
-// console.log(joinedPath)
-// console.log(normalizedPath);
-// console.log(resolvedPath);
+const databaseFile = 'database.json';
 
-// OS
-// const os = require('os');
-// const { exec } = require('child_process');
-//
-// // x64 x86 = x32
-// console.log(os.cpus());
-// console.log(os.arch());
-// console.log(os.version());
+function readDatabase() {
+    try {
+        const data = fs.readFileSync(databaseFile , "utf-8");
+        return JSON.parse(data);
+    } catch (error) {
+        console.error('Error', error);
+        return [];
+    }
+}
 
-//
-const path = require('path');
-const fs =require('fs');
+function writeDatabase(database) {
+    try {
+        const data = JSON.stringify(database, null, 2);
+        fs.writeFileSync(databaseFile, data);
+    } catch (error) {
+        console.error('Error', error);
+    }
+}
 
+//ім'ям
+function userExists(username) {
+    const database = readDatabase();
+    return database.some(user => user.name === username);
+}
 
-//файли
+//ім'ям та віком
+function validateUser(name, age) {
+    return name.length > 3 && age >= 0;
+}
 
-fs.writeFile(path.join(__dirname, 'node app.js' , 'node1file'),'node1file hii',(err)=>{
-  if (err) throw new Error(err.message);
-})
-fs.writeFile(path.join(__dirname, 'node app.js' , 'node2file.obj'),'node1file hii',(err)=>{
-  if (err) throw new Error(err.message);
-})
-fs.writeFile(path.join(__dirname, 'node app.js' , 'node3file.obj'),'node1file hii',(err)=>{
-  if (err) throw new Error(err.message);
-})
-fs.writeFile(path.join(__dirname, 'node app.js' , 'node4file.obj'),'node1file hii',(err)=>{
-  if (err) throw new Error(err.message);
-})
-fs.writeFile(path.join(__dirname, 'node app.js' , 'node5file.obj'),'node1file hii',(err)=>{
-  if (err) throw new Error(err.message);
-})
+const users = [
+    {
+        name: 'Oleh',
+        age: 20,
+        gender: 'male'
+    },
+    {
+        name: 'Anton',
+        age: 10,
+        gender: 'male'
+    },
+    {
+        name: 'Inokentiy',
+        age: 25,
+        gender: 'female'
+    },
+    {
+        name: 'Anastasiya',
+        age: 15,
+        gender: 'female'
+    },
+    {
+        name: 'Cocos',
+        age: 25,
+        gender: 'other'
+    }
+];
 
+if (!fs.existsSync(databaseFile)) {
+    writeDatabase(users);
+}
 
-//папки
+// all  user
+app.get('/users', (req, res) => {
+    const database = readDatabase();
+    res.json(database);
+});
 
-fs.mkdir(path.join(__dirname, 'node app.js' , 'szooo') , (err)=>{
-  if (err) throw new Error(err.message);
-})
-fs.mkdir(path.join(__dirname, 'node app.js' , 'szooo1') , (err)=>{
-  if (err) throw new Error(err.message);
-})
-fs.mkdir(path.join(__dirname, 'node app.js' , 'szooo2') , (err)=>{
-  if (err) throw new Error(err.message);
-})
-fs.mkdir(path.join(__dirname, 'node app.js' , 'szooo3') , (err)=>{
-  if (err) throw new Error(err.message);
-})
-fs.mkdir(path.join(__dirname, 'node app.js' , 'szooo4') , (err)=>{
-  if (err) throw new Error(err.message);
-})
+// +
+app.post('/users', (req, res) => {
+    const {name, age, gender} = req.body;
 
-//перевірки на нутро
+    if (validateUser(name, age) && !userExists(name)) {
+        const database = readDatabase();
+        database.push({name, age, gender});
+        writeDatabase(database);
+        res.sendStatus(200);
+    } else {
+        res.status(400).send('Invalid user data');
+    }
+});
 
-fs.readdir(path.join(__dirname, 'node app.js'), { withFileTypes: true }, (err, files)=>{
-  if (err) throw new Error(err.message);
-  files.forEach(file=>{
-    console.log(file.isDirectory());
-  })
-})
+// -
+app.delete('/users/:name', (req, res) => {
+    const {name} = req.params;
+
+    if (userExists(name)) {
+        const database = readDatabase();
+        const updatedDatabase = database.filter(user => user.name !== name);
+        writeDatabase(updatedDatabase);
+        res.sendStatus(200);
+    } else {
+        res.status(404).send('User not found');
+    }
+});
+//ignor   404
+app.get('/favicon.ico', (req, res) => {
+    res.status(204).end();
+});
+
+// Запуск
+
+const PORT = 5001;
+app.listen(PORT, () => {
+    console.log(' port ${PORT} 🥸');
+});
